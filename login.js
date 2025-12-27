@@ -1,5 +1,5 @@
 import { db } from './firebase.js';
-import { collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const loginBtn = document.getElementById('loginBtn');
 const userName = document.getElementById('userName');
@@ -8,7 +8,7 @@ const toast = document.getElementById('toast');
 const toastMsg = document.getElementById('toastMsg');
 
 // Check if already logged in
-if (localStorage.getItem('cc_user_id')) {
+if (localStorage.getItem('cc_user_matric')) {
     window.location.href = 'main.html';
 }
 
@@ -29,28 +29,23 @@ loginBtn.addEventListener('click', async () => {
     loginBtn.disabled = true;
 
     try {
-        const usersRef = collection(db, "users");
+        // "One Table" Logic:
+        // We just check the 'entries' collection to see if this person has been here before.
+        const entriesRef = collection(db, "entries");
+        const q = query(entriesRef, where("matric", "==", matric));
+        const snapshot = await getDocs(q);
 
-        // 1. Check if user already exists
-        const q = query(usersRef, where("matric", "==", matric));
-        const querySnapshot = await getDocs(q);
+        // Save details to LocalStorage (so app.js can use them)
+        localStorage.setItem('cc_user_matric', matric);
+        localStorage.setItem('cc_user_name', name);
 
-        if (!querySnapshot.empty) {
-            // User exists - Log them in
+        if (!snapshot.empty) {
             showToast(`Welcome back, ${name}!`);
-            localStorage.setItem('cc_user_id', matric);
-            setTimeout(() => window.location.href = 'main.html', 1000);
         } else {
-            // User does not exist - Register them automatically
-            await addDoc(usersRef, {
-                name: name,
-                matric: matric,
-                joinedAt: new Date().toISOString()
-            });
-            showToast(`Account created! Welcome, ${name}.`);
-            localStorage.setItem('cc_user_id', matric);
-            setTimeout(() => window.location.href = 'main.html', 1000);
+            showToast(`Welcome, ${name}! Start tracking now.`);
         }
+
+        setTimeout(() => window.location.href = 'main.html', 1000);
 
     } catch (error) {
         console.error("Error logging in:", error);

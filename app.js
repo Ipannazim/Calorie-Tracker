@@ -1,17 +1,20 @@
 import { db } from './firebase.js';
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// State
-let userId = localStorage.getItem('cc_user_id');
+// --- STATE ---
+// Retrieve the Matric AND Name we saved during login
+const userMatric = localStorage.getItem('cc_user_matric');
+const userName = localStorage.getItem('cc_user_name');
+
 let currentEntries = [];
 let currentGoal = 2200;
 
 // Redirect if not logged in
-if (!userId) {
+if (!userMatric) {
   window.location.href = 'index.html';
 }
 
-// DOM Elements
+// --- DOM ELEMENTS ---
 const els = {
   dailyGoal: document.getElementById('dailyGoal'),
   saveGoalBtn: document.getElementById('saveGoalBtn'),
@@ -30,23 +33,19 @@ const els = {
   toastMsg: document.getElementById('toastMsg')
 };
 
-// --- AUTHENTICATION ---
-if (userId) {
-  initData();
-}
+// Start Data
+initData();
 
-// --- DATA FETCHING (FIREBASE) ---
+// --- DATA FETCHING ---
 async function initData() {
-  const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const dateStr = new Date().toISOString().split('T')[0]; // Today's YYYY-MM-DD
 
   try {
-    // Query: Get entries for this user AND this date
+    // Query 'entries' where 'matric' matches the logged-in user
     const q = query(
       collection(db, "entries"),
-      where("userId", "==", userId),
+      where("matric", "==", userMatric),
       where("date", "==", dateStr)
-      // Note: orderBy requires an index in Firestore sometimes, but for small data it's fine. 
-      // If console warns about index, follow the link it gives you.
     );
 
     const querySnapshot = await getDocs(q);
@@ -67,7 +66,7 @@ async function initData() {
 
 // --- EVENT LISTENERS ---
 
-// 1. Add Entry
+// 1. ADD ENTRY (Updated for Single Table)
 els.addForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -78,33 +77,31 @@ els.addForm.addEventListener('submit', async (e) => {
   if (!food || isNaN(amount) || amount <= 0) return;
 
   // Calculate calories
-  let calories = 0;
-  if (food.unit === 'serving') {
-    calories = food.cals * amount;
-  } else {
-    calories = (food.cals / 100) * amount;
-  }
+  let calories = (food.unit === 'serving')
+    ? food.cals * amount
+    : (food.cals / 100) * amount;
 
+  // Create the Single Table Entry
   const newEntry = {
-    userId: userId,
+    matric: userMatric,   // Replaces 'userId'
+    userName: userName,   // We store the name in the entry now
     name: food.name,
     unit: food.unit,
     amount: amount,
     cals: Math.round(calories),
-    date: new Date().toISOString().split('T')[0], // Today's date
+    date: new Date().toISOString().split('T')[0],
     timestamp: Date.now()
   };
 
   try {
     const docRef = await addDoc(collection(db, "entries"), newEntry);
 
-    // Add to local list immediately for UI update
     currentEntries.push({ id: docRef.id, ...newEntry });
     renderEntries();
     updateSummary();
     showToast("Entry added!");
     els.addForm.reset();
-    populateFoods(); // Reset select
+    populateFoods();
 
   } catch (error) {
     console.error("Error adding entry:", error);
@@ -112,36 +109,34 @@ els.addForm.addEventListener('submit', async (e) => {
   }
 });
 
-// 2. Reset Day (Delete all entries for today)
+// 2. RESET DAY
 els.resetDayBtn.addEventListener('click', async () => {
   if (!confirm("Clear all entries for today?")) return;
 
   try {
-    // We have to delete one by one in Firestore
     const deletePromises = currentEntries.map(entry =>
       deleteDoc(doc(db, "entries", entry.id))
     );
-
     await Promise.all(deletePromises);
 
     currentEntries = [];
     renderEntries();
     updateSummary();
     showToast("Day reset successfully");
-
   } catch (error) {
     console.error("Error resetting day:", error);
     showToast("Failed to reset");
   }
 });
 
-// 3. Logout
+// 3. LOGOUT
 els.logoutBtn.addEventListener('click', () => {
-  localStorage.removeItem('cc_user_id');
+  localStorage.removeItem('cc_user_matric');
+  localStorage.removeItem('cc_user_name');
   window.location.href = 'index.html';
 });
 
-// 4. Save Goal (Local Storage is fine for this setting)
+// 4. SAVE GOAL
 els.saveGoalBtn.addEventListener('click', () => {
   const goal = els.dailyGoal.value;
   if (goal && goal > 500) {
@@ -152,12 +147,10 @@ els.saveGoalBtn.addEventListener('click', () => {
   }
 });
 
-// --- HELPER FUNCTIONS ---
+// --- UI HELPERS ---
 
 function renderEntries() {
   els.entries.innerHTML = '';
-
-  // Sort by newest first
   const sorted = [...currentEntries].sort((a, b) => b.timestamp - a.timestamp);
 
   sorted.forEach(entry => {
@@ -175,8 +168,6 @@ function renderEntries() {
         </button>
       </div>
     `;
-
-    // Add delete listener specifically to this button
     el.querySelector('.delete-btn').addEventListener('click', () => deleteEntry(entry.id));
     els.entries.appendChild(el);
   });
@@ -184,7 +175,6 @@ function renderEntries() {
 
 async function deleteEntry(id) {
   if (!confirm("Delete this entry?")) return;
-
   try {
     await deleteDoc(doc(db, "entries", id));
     currentEntries = currentEntries.filter(e => e.id !== id);
@@ -201,7 +191,6 @@ function updateSummary() {
   const total = currentEntries.reduce((sum, e) => sum + e.cals, 0);
   els.totalCals.textContent = total;
 
-  // Update Goal from local storage if exists
   const savedGoal = localStorage.getItem('cc_daily_goal');
   if (savedGoal) currentGoal = parseInt(savedGoal);
 
@@ -284,6 +273,5 @@ function updatePerUnitInfo() {
   }
 }
 
-// Initial Setup
 populateFoods();
 els.foodSelect.addEventListener('change', updatePerUnitInfo);
