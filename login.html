@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - Calorie Counter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="login-overlay" style="position: static; height: 100vh;">
+        <div class="card login-card">
+            <h2 style="text-align: center;">Welcome Back</h2>
+            <div class="field">
+                <label for="userName">Full Name</label>
+                <input id="userName" type="text" placeholder="Enter Name" required>
+            </div>
+            <div class="field">
+                <label for="matricNo">Matric Number</label>
+                <input id="matricNo" type="text" placeholder="e.g. 20241234" required>
+            </div>
+            <button id="loginBtn" class="btn btn--primary" style="width: 100%; justify-content: center;">Enter
+                Dashboard</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span id="toastMsg">Action successful</span>
+    </div>
+
+
+    <script src="login.js" defer></script>
+</body>
+
+</html>
