@@ -8,7 +8,7 @@ let currentGoal = 2200;
 
 // Redirect if not logged in
 if (!userId) {
-  window.location.href = 'login.html';
+  window.location.href = 'index.html';
 }
 
 // DOM Elements
@@ -209,7 +209,7 @@ async function resetDay() {
 function handleLogout() {
   if (confirm("Are you sure you want to logout?")) {
     localStorage.removeItem('cc_user_id');
-    window.location.href = 'login.html';
+    window.location.href = 'index.html';
   }
 }
 

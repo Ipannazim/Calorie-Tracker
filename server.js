@@ -121,5 +121,5 @@ app.delete('/api/entries/:id', (req, res) => {
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running!`);
-    console.log(`👉 Open http://localhost:${PORT}/login.html`);
+    console.log(`👉 Open http://localhost:${PORT}/index.html`);
 });
