@@ -1,5 +1,5 @@
-// --- MySQL / LOCAL SERVER CONFIG ---
-const API_URL = 'http://localhost:3000/api'; // Ensure your server.js is running
+import { db } from './firebase.js';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // State
 let userId = localStorage.getItem('cc_user_id');
@@ -31,189 +31,187 @@ const els = {
 };
 
 // --- AUTHENTICATION ---
-
-// If userId exists (meaning we didn't redirect), initialize data
 if (userId) {
   initData();
 }
 
-// --- DATA FETCHING ---
-
-function getTodayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
+// --- DATA FETCHING (FIREBASE) ---
 async function initData() {
-  if (!userId) return;
+  const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
   try {
-    // 1. Get Goal
-    const goalRes = await fetch(`${API_URL}/users/${userId}`);
-    const goalData = await goalRes.json();
-    if (goalData && goalData.daily_goal) {
-      currentGoal = goalData.daily_goal;
-    }
+    // Query: Get entries for this user AND this date
+    const q = query(
+      collection(db, "entries"),
+      where("userId", "==", userId),
+      where("date", "==", dateStr)
+      // Note: orderBy requires an index in Firestore sometimes, but for small data it's fine. 
+      // If console warns about index, follow the link it gives you.
+    );
 
-    // 2. Get Today's Entries
-    await fetchEntries();
-  } catch (err) {
-    console.error(err);
+    const querySnapshot = await getDocs(q);
+
+    currentEntries = [];
+    querySnapshot.forEach((doc) => {
+      currentEntries.push({ id: doc.id, ...doc.data() });
+    });
+
+    renderEntries();
+    updateSummary();
+
+  } catch (error) {
+    console.error("Error fetching data:", error);
     showToast("Error loading data");
   }
 }
 
-async function fetchEntries() {
-  try {
-    const date = getTodayKey();
-    const res = await fetch(`${API_URL}/entries/${userId}?date=${date}`);
-    currentEntries = await res.json();
-    render();
-  } catch (err) {
-    console.error(err);
-  }
-}
+// --- EVENT LISTENERS ---
 
-// --- RENDERING ---
-
-function render() {
-  const total = currentEntries.reduce((sum, e) => sum + e.cals, 0);
-
-  // Update Stats
-  els.totalCals.textContent = Math.round(total);
-  els.goalCals.textContent = Math.round(currentGoal);
-  const pct = currentGoal ? Math.min(100, (total / currentGoal) * 100) : 0;
-  els.progressBar.style.width = `${pct}%`;
-
-  if (els.dailyGoal.value === "") {
-    els.dailyGoal.value = currentGoal;
-  }
-
-  // Render List
-  els.entries.innerHTML = '';
-  currentEntries.forEach((e, idx) => {
-    const item = document.createElement('div');
-    item.className = 'entry';
-    item.style.animationDelay = `${idx * 0.05}s`; // Stagger animation
-
-    item.innerHTML = `
-      <div class="entry__info">
-        <h3>${e.name}</h3>
-        <div class="entry__meta">${e.amount} ${e.unit}${e.unit === 'g' ? '' : e.amount > 1 ? 's' : ''}</div>
-      </div>
-      <div class="entry__actions">
-        <span class="entry__cals">${Math.round(e.cals)}</span>
-        <button class="btn btn--danger" style="padding: 6px;" data-action="del" data-id="${e.id}" aria-label="Delete">
-           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-        </button>
-      </div>`;
-    els.entries.appendChild(item);
-  });
-}
-
-// --- ACTIONS ---
-
-async function addEntry(e) {
+// 1. Add Entry
+els.addForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const selectedId = els.foodSelect.value;
-  const food = FOOD_LIST.find(f => f.id === selectedId);
-  const amount = Number(els.foodAmount.value || 0);
 
-  if (!food || isNaN(amount) || amount <= 0) {
-    showToast('Select food & amount');
-    return;
+  const foodId = els.foodSelect.value;
+  const amount = parseFloat(els.foodAmount.value);
+  const food = FOOD_LIST.find(f => f.id === foodId);
+
+  if (!food || isNaN(amount) || amount <= 0) return;
+
+  // Calculate calories
+  let calories = 0;
+  if (food.unit === 'serving') {
+    calories = food.cals * amount;
+  } else {
+    calories = (food.cals / 100) * amount;
   }
 
-  let cals = 0;
-  if (food.unit === 'serving') cals = amount * food.cals;
-  else if (food.unit === 'g') cals = (amount / 100) * food.cals;
-
-  const entry = {
-    userId,
+  const newEntry = {
+    userId: userId,
     name: food.name,
-    unit: food.unit === 'g' ? 'g' : 'serving',
-    amount,
-    cals,
-    date: getTodayKey(),
+    unit: food.unit,
+    amount: amount,
+    cals: Math.round(calories),
+    date: new Date().toISOString().split('T')[0], // Today's date
     timestamp: Date.now()
   };
 
   try {
-    const res = await fetch(`${API_URL}/entries`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry)
-    });
-    if (res.ok) {
-      els.foodAmount.value = '';
-      showToast('Added');
-      fetchEntries(); // Reload list
-    } else {
-      showToast('Error adding');
-    }
-  } catch (err) {
-    console.error(err);
-    showToast('Server connection error');
-  }
-}
+    const docRef = await addDoc(collection(db, "entries"), newEntry);
 
-async function saveGoal() {
-  const g = Number(els.dailyGoal.value || 0);
-  const newGoal = Math.max(0, g);
+    // Add to local list immediately for UI update
+    currentEntries.push({ id: docRef.id, ...newEntry });
+    renderEntries();
+    updateSummary();
+    showToast("Entry added!");
+    els.addForm.reset();
+    populateFoods(); // Reset select
+
+  } catch (error) {
+    console.error("Error adding entry:", error);
+    showToast("Failed to save entry");
+  }
+});
+
+// 2. Reset Day (Delete all entries for today)
+els.resetDayBtn.addEventListener('click', async () => {
+  if (!confirm("Clear all entries for today?")) return;
 
   try {
-    await fetch(`${API_URL}/users/${userId}/goal`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goal: newGoal })
-    });
-    currentGoal = newGoal;
-    render();
-    showToast('Goal saved');
-  } catch (err) {
-    showToast('Error saving goal');
+    // We have to delete one by one in Firestore
+    const deletePromises = currentEntries.map(entry =>
+      deleteDoc(doc(db, "entries", entry.id))
+    );
+
+    await Promise.all(deletePromises);
+
+    currentEntries = [];
+    renderEntries();
+    updateSummary();
+    showToast("Day reset successfully");
+
+  } catch (error) {
+    console.error("Error resetting day:", error);
+    showToast("Failed to reset");
+  }
+});
+
+// 3. Logout
+els.logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem('cc_user_id');
+  window.location.href = 'index.html';
+});
+
+// 4. Save Goal (Local Storage is fine for this setting)
+els.saveGoalBtn.addEventListener('click', () => {
+  const goal = els.dailyGoal.value;
+  if (goal && goal > 500) {
+    currentGoal = goal;
+    localStorage.setItem('cc_daily_goal', goal);
+    updateSummary();
+    showToast("Daily goal updated!");
+  }
+});
+
+// --- HELPER FUNCTIONS ---
+
+function renderEntries() {
+  els.entries.innerHTML = '';
+
+  // Sort by newest first
+  const sorted = [...currentEntries].sort((a, b) => b.timestamp - a.timestamp);
+
+  sorted.forEach(entry => {
+    const el = document.createElement('div');
+    el.className = 'entry';
+    el.innerHTML = `
+      <div class="entry__info">
+        <h3>${entry.name}</h3>
+        <div class="entry__meta">${entry.amount} ${entry.unit === 'g' ? 'g' : 'serving(s)'}</div>
+      </div>
+      <div class="entry__actions">
+        <span class="entry__cals">${entry.cals}</span>
+        <button class="btn-icon delete-btn" data-id="${entry.id}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </div>
+    `;
+
+    // Add delete listener specifically to this button
+    el.querySelector('.delete-btn').addEventListener('click', () => deleteEntry(entry.id));
+    els.entries.appendChild(el);
+  });
+}
+
+async function deleteEntry(id) {
+  if (!confirm("Delete this entry?")) return;
+
+  try {
+    await deleteDoc(doc(db, "entries", id));
+    currentEntries = currentEntries.filter(e => e.id !== id);
+    renderEntries();
+    updateSummary();
+    showToast("Entry deleted");
+  } catch (error) {
+    console.error("Error deleting:", error);
+    showToast("Could not delete entry");
   }
 }
 
-async function handleEntryClick(ev) {
-  const btn = ev.target.closest('button[data-action]');
-  if (!btn) return;
+function updateSummary() {
+  const total = currentEntries.reduce((sum, e) => sum + e.cals, 0);
+  els.totalCals.textContent = total;
 
-  const id = btn.getAttribute('data-id');
-  const action = btn.getAttribute('data-action');
+  // Update Goal from local storage if exists
+  const savedGoal = localStorage.getItem('cc_daily_goal');
+  if (savedGoal) currentGoal = parseInt(savedGoal);
 
-  if (action === 'del') {
-    try {
-      await fetch(`${API_URL}/entries/${id}`, { method: 'DELETE' });
-      showToast('Deleted');
-      fetchEntries();
-    } catch (err) {
-      showToast('Error deleting');
-    }
-  }
+  els.goalCals.textContent = currentGoal;
+  els.dailyGoal.value = currentGoal;
+
+  const percent = Math.min((total / currentGoal) * 100, 100);
+  els.progressBar.style.width = `${percent}%`;
+  els.progressBar.style.background = percent > 100 ? 'var(--danger)' : 'var(--primary)';
 }
-
-async function resetDay() {
-  if (!confirm("Clear all today's entries?")) return;
-  // In a real app, you'd make a batch delete API endpoint. 
-  // For now, we'll just delete them one by one or implementing a 'clear day' endpoint is better.
-  // Let's keep it simple for this snippet or add a clear-day endpoint later.
-  // We will loop delete for now.
-  for (const e of currentEntries) {
-    await fetch(`${API_URL}/entries/${e.id}`, { method: 'DELETE' });
-  }
-  showToast('Reset complete');
-  fetchEntries();
-}
-
-function handleLogout() {
-  if (confirm("Are you sure you want to logout?")) {
-    localStorage.removeItem('cc_user_id');
-    window.location.href = 'index.html';
-  }
-}
-
-// --- UTILS & CONSTANTS ---
 
 function showToast(message) {
   if (els.toastMsg) els.toastMsg.textContent = message;
@@ -222,37 +220,17 @@ function showToast(message) {
   setTimeout(() => els.toast.classList.remove('toast--show'), 2000);
 }
 
+// --- FOOD DATA ---
 const FOOD_LIST = [
-  // --- STUDENT STAPLES ---
-  { id: 'nasi_ayam', name: 'Chicken Rice (Roasted/Steamed)', unit: 'serving', cals: 620 },
-  { id: 'nasi_lemak', name: 'Nasi Lemak (Bungkus/Plain)', unit: 'serving', cals: 400 },
-  { id: 'nasi_goreng_k', name: 'Nasi Goreng Kampung', unit: 'serving', cals: 640 },
-  { id: 'nasi_goreng_usa', name: 'Nasi Goreng USA', unit: 'serving', cals: 750 },
-  { id: 'nasi_bujang', name: 'Nasi Bujang (Rice, Egg, Soup)', unit: 'serving', cals: 350 },
-
-  // --- MAMAK & NOODLES ---
-  { id: 'roti_canai', name: 'Roti Canai (1 pc + Dhal)', unit: 'serving', cals: 360 },
-  { id: 'roti_telur', name: 'Roti Telur (1 pc + Curry)', unit: 'serving', cals: 450 },
-  { id: 'maggi_goreng', name: 'Maggi Goreng (Biasa)', unit: 'serving', cals: 470 },
-  { id: 'shawarma', name: 'Chicken Shawarma/Kebab', unit: 'serving', cals: 450 },
-  { id: 'burger_ramly', name: 'Ramly Burger (Ayam/Daging)', unit: 'serving', cals: 480 },
-
-  // --- SIDES & EXTRAS ---
-  { id: 'ayam_goreng', name: 'Ayam Goreng (Mamak/Spicy)', unit: 'serving', cals: 290 },
-  { id: 'telur_mata', name: 'Telur Mata (Fried Egg)', unit: 'serving', cals: 90 },
-  { id: 'kuih', name: 'Kuih (Karipap/Donut - 1 pc)', unit: 'serving', cals: 130 },
-  { id: 'keropok', name: 'Keropok Lekor (5 pcs)', unit: 'serving', cals: 150 },
-
-  // --- DRINKS ---
-  { id: 'milo_ais', name: 'Milo Ais', unit: 'serving', cals: 220 },
-  { id: 'teh_tarik', name: 'Teh Tarik', unit: 'serving', cals: 190 },
-  { id: 'teh_o_ais', name: 'Teh O Ais', unit: 'serving', cals: 80 },
-  { id: 'sirap_bandung', name: 'Sirap Bandung', unit: 'serving', cals: 180 },
-
-  // --- GENERIC (For specific measurements) ---
-  { id: 'rice_g', name: 'White Rice (per 100g)', unit: 'g', cals: 130 },
-  { id: 'chicken_g', name: 'Chicken Breast (per 100g)', unit: 'g', cals: 165 },
-  { id: 'mixed_veg', name: 'Mixed Vegetables (1 scoop)', unit: 'serving', cals: 80 }
+  { id: 'rice', name: 'White Rice (1 cup)', unit: 'serving', cals: 200 },
+  { id: 'chicken_breast', name: 'Chicken Breast (100g)', unit: 'g', cals: 165 },
+  { id: 'egg', name: 'Boiled Egg (1 large)', unit: 'serving', cals: 78 },
+  { id: 'apple', name: 'Apple (Medium)', unit: 'serving', cals: 95 },
+  { id: 'bread', name: 'White Bread (1 slice)', unit: 'serving', cals: 79 },
+  { id: 'milk', name: 'Whole Milk (1 cup)', unit: 'serving', cals: 150 },
+  { id: 'mixed_veg', name: 'Mixed Vegetables (1 scoop)', unit: 'serving', cals: 80 },
+  { id: 'nasi_lemak', name: 'Nasi Lemak (Basic)', unit: 'serving', cals: 350 },
+  { id: 'teh_tarik', name: 'Teh Tarik', unit: 'serving', cals: 180 }
 ];
 
 function populateFoods() {
@@ -275,29 +253,16 @@ function updatePerUnitInfo() {
     els.perUnitInfo.textContent = `Per serving: ${food.cals} kcal`;
     els.foodAmount.placeholder = '1';
     els.foodAmount.step = '0.5';
-
-    // --- ADD THIS LINE BELOW ---
     els.foodAmount.value = 1;
-    // ---------------------------
-
   } else {
     els.amountUnit.textContent = 'g';
     els.perUnitInfo.textContent = `Per 100g: ${food.cals} kcal`;
     els.foodAmount.placeholder = '100';
     els.foodAmount.step = '10';
-
-    // Optional: Auto-set to 100 for gram-based items
     els.foodAmount.value = 100;
   }
 }
 
-// Event Listeners
-els.saveGoalBtn.addEventListener('click', saveGoal);
-els.addForm.addEventListener('submit', addEntry);
-els.entries.addEventListener('click', handleEntryClick);
-els.resetDayBtn.addEventListener('click', resetDay);
-els.logoutBtn.addEventListener('click', handleLogout);
-els.foodSelect.addEventListener('change', updatePerUnitInfo);
-
-// Initialize
+// Initial Setup
 populateFoods();
+els.foodSelect.addEventListener('change', updatePerUnitInfo);

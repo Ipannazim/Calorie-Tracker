@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:3000/api';
+import { db } from './firebase.js';
+import { collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const loginBtn = document.getElementById('loginBtn');
 const userName = document.getElementById('userName');
@@ -19,30 +20,42 @@ function showToast(message) {
 }
 
 loginBtn.addEventListener('click', async () => {
-    const name = userName.value;
-    const matric = matricNo.value;
+    const name = userName.value.trim();
+    const matric = matricNo.value.trim();
 
     if (!name || !matric) return showToast("Please fill all fields");
 
-    try {
-        const res = await fetch(`${API_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, matric })
-        });
-        const data = await res.json();
+    loginBtn.textContent = "Loading...";
+    loginBtn.disabled = true;
 
-        if (data.success) {
-            localStorage.setItem('cc_user_id', data.userId);
-            showToast(`Welcome, ${name}!`);
-            setTimeout(() => {
-                window.location.href = 'main.html';
-            }, 1000);
+    try {
+        const usersRef = collection(db, "users");
+
+        // 1. Check if user already exists
+        const q = query(usersRef, where("matric", "==", matric));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            // User exists - Log them in
+            showToast(`Welcome back, ${name}!`);
+            localStorage.setItem('cc_user_id', matric);
+            setTimeout(() => window.location.href = 'main.html', 1000);
         } else {
-            showToast("Login Failed");
+            // User does not exist - Register them automatically
+            await addDoc(usersRef, {
+                name: name,
+                matric: matric,
+                joinedAt: new Date().toISOString()
+            });
+            showToast(`Account created! Welcome, ${name}.`);
+            localStorage.setItem('cc_user_id', matric);
+            setTimeout(() => window.location.href = 'main.html', 1000);
         }
-    } catch (err) {
-        console.error(err);
-        showToast("Server Error. Is Node running?");
+
+    } catch (error) {
+        console.error("Error logging in:", error);
+        showToast("Login failed. Check console.");
+        loginBtn.textContent = "Enter Dashboard";
+        loginBtn.disabled = false;
     }
 });
