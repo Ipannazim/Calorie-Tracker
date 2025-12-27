@@ -222,15 +222,36 @@ function showToast(message) {
 
 // --- FOOD DATA ---
 const FOOD_LIST = [
-  { id: 'rice', name: 'White Rice (1 cup)', unit: 'serving', cals: 200 },
-  { id: 'chicken_breast', name: 'Chicken Breast (100g)', unit: 'g', cals: 165 },
-  { id: 'egg', name: 'Boiled Egg (1 large)', unit: 'serving', cals: 78 },
-  { id: 'apple', name: 'Apple (Medium)', unit: 'serving', cals: 95 },
-  { id: 'bread', name: 'White Bread (1 slice)', unit: 'serving', cals: 79 },
-  { id: 'milk', name: 'Whole Milk (1 cup)', unit: 'serving', cals: 150 },
-  { id: 'mixed_veg', name: 'Mixed Vegetables (1 scoop)', unit: 'serving', cals: 80 },
-  { id: 'nasi_lemak', name: 'Nasi Lemak (Basic)', unit: 'serving', cals: 350 },
-  { id: 'teh_tarik', name: 'Teh Tarik', unit: 'serving', cals: 180 }
+  // --- STUDENT STAPLES ---
+  { id: 'nasi_ayam', name: 'Chicken Rice (Roasted/Steamed)', unit: 'serving', cals: 620 },
+  { id: 'nasi_lemak', name: 'Nasi Lemak (Bungkus/Plain)', unit: 'serving', cals: 400 },
+  { id: 'nasi_goreng_k', name: 'Nasi Goreng Kampung', unit: 'serving', cals: 640 },
+  { id: 'nasi_goreng_usa', name: 'Nasi Goreng USA', unit: 'serving', cals: 750 },
+  { id: 'nasi_bujang', name: 'Nasi Bujang (Rice, Egg, Soup)', unit: 'serving', cals: 350 },
+
+  // --- MAMAK & NOODLES ---
+  { id: 'roti_canai', name: 'Roti Canai (1 pc + Dhal)', unit: 'serving', cals: 360 },
+  { id: 'roti_telur', name: 'Roti Telur (1 pc + Curry)', unit: 'serving', cals: 450 },
+  { id: 'maggi_goreng', name: 'Maggi Goreng (Biasa)', unit: 'serving', cals: 470 },
+  { id: 'shawarma', name: 'Chicken Shawarma/Kebab', unit: 'serving', cals: 450 },
+  { id: 'burger_ramly', name: 'Ramly Burger (Ayam/Daging)', unit: 'serving', cals: 480 },
+
+  // --- SIDES & EXTRAS ---
+  { id: 'ayam_goreng', name: 'Ayam Goreng (Mamak/Spicy)', unit: 'serving', cals: 290 },
+  { id: 'telur_mata', name: 'Telur Mata (Fried Egg)', unit: 'serving', cals: 90 },
+  { id: 'kuih', name: 'Kuih (Karipap/Donut - 1 pc)', unit: 'serving', cals: 130 },
+  { id: 'keropok', name: 'Keropok Lekor (5 pcs)', unit: 'serving', cals: 150 },
+
+  // --- DRINKS ---
+  { id: 'milo_ais', name: 'Milo Ais', unit: 'serving', cals: 220 },
+  { id: 'teh_tarik', name: 'Teh Tarik', unit: 'serving', cals: 190 },
+  { id: 'teh_o_ais', name: 'Teh O Ais', unit: 'serving', cals: 80 },
+  { id: 'sirap_bandung', name: 'Sirap Bandung', unit: 'serving', cals: 180 },
+
+  // --- GENERIC (For specific measurements) ---
+  { id: 'rice_g', name: 'White Rice (per 100g)', unit: 'g', cals: 130 },
+  { id: 'chicken_g', name: 'Chicken Breast (per 100g)', unit: 'g', cals: 165 },
+  { id: 'mixed_veg', name: 'Mixed Vegetables (1 scoop)', unit: 'serving', cals: 80 }
 ];
 
 function populateFoods() {
