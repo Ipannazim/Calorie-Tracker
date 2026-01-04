@@ -211,36 +211,26 @@ function showToast(message) {
 
 // --- FOOD DATA ---
 const FOOD_LIST = [
-  // --- STUDENT STAPLES ---
-  { id: 'nasi_ayam', name: 'Chicken Rice (Roasted/Steamed)', unit: 'serving', cals: 620 },
-  { id: 'nasi_lemak', name: 'Nasi Lemak (Bungkus/Plain)', unit: 'serving', cals: 400 },
-  { id: 'nasi_goreng_k', name: 'Nasi Goreng Kampung', unit: 'serving', cals: 640 },
-  { id: 'nasi_goreng_usa', name: 'Nasi Goreng USA', unit: 'serving', cals: 750 },
-  { id: 'nasi_bujang', name: 'Nasi Bujang (Rice, Egg, Soup)', unit: 'serving', cals: 350 },
+{ id: 'nasi_putih', name: 'Nasi Putih (1 cup)', unit: 'serving', cals: 200 },
+  { id: 'nasi_ayam_set', name: 'Nasi Ayam (Complete Set)', unit: 'serving', cals: 650 },
+  { id: 'nasi_gepuk', name: 'Nasi Ayam Gepuk (Set)', unit: 'serving', cals: 750 },
+  { id: 'nasi_lemak', name: 'Nasi Lemak (Basic)', unit: 'serving', cals: 350 },
 
-  // --- MAMAK & NOODLES ---
-  { id: 'roti_canai', name: 'Roti Canai (1 pc + Dhal)', unit: 'serving', cals: 360 },
-  { id: 'roti_telur', name: 'Roti Telur (1 pc + Curry)', unit: 'serving', cals: 450 },
-  { id: 'maggi_goreng', name: 'Maggi Goreng (Biasa)', unit: 'serving', cals: 470 },
-  { id: 'shawarma', name: 'Chicken Shawarma/Kebab', unit: 'serving', cals: 450 },
-  { id: 'burger_ramly', name: 'Ramly Burger (Ayam/Daging)', unit: 'serving', cals: 480 },
+  // --- MEAT & FISH ---
+  { id: 'ayam_kurma', name: 'Ayam Masak Kurma', unit: 'serving', cals: 380 },
+  { id: 'ayam_lemak', name: 'Ayam Masak Lemak', unit: 'serving', cals: 440 },
+  { id: 'ayam_kicap', name: 'Ayam Masak Kicap', unit: 'serving', cals: 350 },
+  { id: 'ayam_goreng', name: 'Ayam Goreng (1 piece)', unit: 'serving', cals: 310 },
+  { id: 'asam_pedas', name: 'Asam Pedas Ikan Pari', unit: 'serving', cals: 250 },
+  { id: 'kari_daging', name: 'Kari Daging', unit: 'serving', cals: 500 },
+  { id: 'daging_lemak', name: 'Daging Masak Lemak', unit: 'serving', cals: 550 },
 
-  // --- SIDES & EXTRAS ---
-  { id: 'ayam_goreng', name: 'Ayam Goreng (Mamak/Spicy)', unit: 'serving', cals: 290 },
-  { id: 'telur_mata', name: 'Telur Mata (Fried Egg)', unit: 'serving', cals: 90 },
-  { id: 'kuih', name: 'Kuih (Karipap/Donut - 1 pc)', unit: 'serving', cals: 130 },
-  { id: 'keropok', name: 'Keropok Lekor (5 pcs)', unit: 'serving', cals: 150 },
-
-  // --- DRINKS ---
-  { id: 'milo_ais', name: 'Milo Ais', unit: 'serving', cals: 220 },
-  { id: 'teh_tarik', name: 'Teh Tarik', unit: 'serving', cals: 190 },
-  { id: 'teh_o_ais', name: 'Teh O Ais', unit: 'serving', cals: 80 },
-  { id: 'sirap_bandung', name: 'Sirap Bandung', unit: 'serving', cals: 180 },
-
-  // --- GENERIC (For specific measurements) ---
-  { id: 'rice_g', name: 'White Rice (per 100g)', unit: 'g', cals: 130 },
-  { id: 'chicken_g', name: 'Chicken Breast (per 100g)', unit: 'g', cals: 165 },
-  { id: 'mixed_veg', name: 'Mixed Vegetables (1 scoop)', unit: 'serving', cals: 80 }
+  // --- VEGETABLES & SIDES ---
+  { id: 'kangkung_belacan', name: 'Kangkung Belacan', unit: 'serving', cals: 270 },
+  { id: 'sawi_belacan', name: 'Sawi Belacan', unit: 'serving', cals: 150 },
+  { id: 'taugeh_tumis', name: 'Taugeh Tumis', unit: 'serving', cals: 120 },
+  { id: 'bayam_air', name: 'Bayam Masak Air', unit: 'serving', cals: 55 },
+  { id: 'sambal_kentang', name: 'Sambal Kentang Ikan Bilis', unit: 'serving', cals: 300 },
 ];
 
 function populateFoods() {
